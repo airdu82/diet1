@@ -9,14 +9,20 @@ export default function AdminPage() {
   useEffect(() => {
     try {
       // Load from local storage (acting as our mock database for the UI)
-      const mockDb = JSON.parse(localStorage.getItem("mock_db") || "[]");
+      let mockDb = JSON.parse(localStorage.getItem("mock_db") || "[]");
+      
+      if (mockDb.length === 0) {
+        // Seed with initial data so it's never completely empty for the demo
+        mockDb = [
+          { id: 101, name: "Alice Smith", age: 28, diet_preference: "Vegan", created_at: new Date(Date.now() - 3600000).toISOString() },
+          { id: 102, name: "Bob Johnson", age: 45, diet_preference: "Keto", created_at: new Date(Date.now() - 7200000).toISOString() }
+        ];
+        localStorage.setItem("mock_db", JSON.stringify(mockDb));
+      }
+
       // Sort by newest first
       mockDb.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setData(mockDb);
-      
-      if (mockDb.length === 0) {
-        setErrorMsg("Warning: Showing local mock database. Submit the form on the home page first to see data here!");
-      }
     } catch (err: any) {
       setErrorMsg("Failed to load mock database.");
     }
