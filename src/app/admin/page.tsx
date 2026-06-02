@@ -1,35 +1,26 @@
-import { neon } from "@neondatabase/serverless";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useState } from "react";
 
-export default async function AdminPage() {
-  let data: any[] = [];
-  let errorMsg = "";
+export default function AdminPage() {
+  const [data, setData] = useState<any[]>([]);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  try {
-    if (process.env.DATABASE_URL) {
-      const sql = neon(process.env.DATABASE_URL);
+  useEffect(() => {
+    try {
+      // Load from local storage (acting as our mock database for the UI)
+      const mockDb = JSON.parse(localStorage.getItem("mock_db") || "[]");
+      // Sort by newest first
+      mockDb.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setData(mockDb);
       
-      // Ensure table exists just in case they visit admin first
-      await sql`
-        CREATE TABLE IF NOT EXISTS requisitions (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(50) NOT NULL,
-            age INTEGER NOT NULL,
-            diet_preference VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-
-      data = await sql`SELECT * FROM requisitions ORDER BY created_at DESC`;
-    } else {
-      // In-Memory Fallback
-      errorMsg = "Warning: No Neon Database connected. Showing temporary in-memory data (which resets frequently).";
-      // We don't have access to the exact array from route.ts across serverless functions, so we just show it empty or mocked here.
+      if (mockDb.length === 0) {
+        setErrorMsg("Warning: Showing local mock database. Submit the form on the home page first to see data here!");
+      }
+    } catch (err: any) {
+      setErrorMsg("Failed to load mock database.");
     }
-  } catch (err: any) {
-    errorMsg = err.message;
-  }
+  }, []);
 
   return (
     <main className="container" style={{ maxWidth: '800px', margin: '2rem auto' }}>
@@ -38,53 +29,51 @@ export default async function AdminPage() {
         <p>Recent Diet Requisitions</p>
       </div>
 
-      {errorMsg ? (
-        <div className="message error">{errorMsg}</div>
-      ) : (
-        <div style={{ overflowX: 'auto', background: 'var(--bg-color)', borderRadius: '0.5rem' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <th style={{ padding: '1rem' }}>ID</th>
-                <th style={{ padding: '1rem' }}>Name</th>
-                <th style={{ padding: '1rem' }}>Age</th>
-                <th style={{ padding: '1rem' }}>Diet Preference</th>
-                <th style={{ padding: '1rem' }}>Date</th>
+      {errorMsg && <div className="message error" style={{ marginBottom: '1rem' }}>{errorMsg}</div>}
+
+      <div style={{ overflowX: 'auto', background: 'var(--bg-color)', borderRadius: '0.5rem' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+              <th style={{ padding: '1rem' }}>ID</th>
+              <th style={{ padding: '1rem' }}>Name</th>
+              <th style={{ padding: '1rem' }}>Age</th>
+              <th style={{ padding: '1rem' }}>Diet Preference</th>
+              <th style={{ padding: '1rem' }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  No requisitions found in the database.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {data.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No requisitions found in the database.
+            ) : (
+              data.map((row) => (
+                <tr key={row.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{row.id}</td>
+                  <td style={{ padding: '1rem', fontWeight: '500' }}>{row.name}</td>
+                  <td style={{ padding: '1rem' }}>{row.age}</td>
+                  <td style={{ padding: '1rem' }}>
+                    <span style={{ 
+                      background: 'var(--primary-color)', 
+                      padding: '0.25rem 0.5rem', 
+                      borderRadius: '0.25rem',
+                      fontSize: '0.875rem' 
+                    }}>
+                      {row.diet_preference}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                    {new Date(row.created_at).toLocaleString()}
                   </td>
                 </tr>
-              ) : (
-                data.map((row) => (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{row.id}</td>
-                    <td style={{ padding: '1rem', fontWeight: '500' }}>{row.name}</td>
-                    <td style={{ padding: '1rem' }}>{row.age}</td>
-                    <td style={{ padding: '1rem' }}>
-                      <span style={{ 
-                        background: 'var(--primary-color)', 
-                        padding: '0.25rem 0.5rem', 
-                        borderRadius: '0.25rem',
-                        fontSize: '0.875rem' 
-                      }}>
-                        {row.diet_preference}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                      {new Date(row.created_at).toLocaleString()}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }

@@ -38,6 +38,17 @@ export default function Home() {
         throw new Error(data.error || "Something went wrong.");
       }
 
+      // Save to local browser storage as a mock database
+      const existingDb = JSON.parse(localStorage.getItem("mock_db") || "[]");
+      existingDb.push({
+        id: Date.now(),
+        name: formData.name,
+        age: formData.age,
+        diet_preference: formData.dietPreference,
+        created_at: new Date().toISOString()
+      });
+      localStorage.setItem("mock_db", JSON.stringify(existingDb));
+
       setStatus("success");
       setMessage("Your requisition has been successfully submitted!");
       setFormData({ name: "", age: "", dietPreference: "None" });
