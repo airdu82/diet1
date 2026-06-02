@@ -6,7 +6,7 @@ export default function AdminPage() {
   const [data, setData] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
 
-  useEffect(() => {
+  const loadData = () => {
     try {
       // Load from local storage (acting as our mock database for the UI)
       let mockDb = JSON.parse(localStorage.getItem("mock_db") || "[]");
@@ -26,6 +26,21 @@ export default function AdminPage() {
     } catch (err: any) {
       setErrorMsg("Failed to load mock database.");
     }
+  };
+
+  useEffect(() => {
+    loadData();
+    
+    // Auto-update if they have the form open in another tab
+    window.addEventListener("storage", loadData);
+    
+    // Fallback polling just in case
+    const interval = setInterval(loadData, 2000);
+
+    return () => {
+      window.removeEventListener("storage", loadData);
+      clearInterval(interval);
+    };
   }, []);
 
   return (
