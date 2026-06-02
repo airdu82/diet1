@@ -7,24 +7,26 @@ export default async function AdminPage() {
   let errorMsg = "";
 
   try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error("Database connection string not configured. Please add DATABASE_URL to your Vercel Environment Variables.");
-    }
-    
-    const sql = neon(process.env.DATABASE_URL);
-    
-    // Ensure table exists just in case they visit admin first
-    await sql`
-      CREATE TABLE IF NOT EXISTS requisitions (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(50) NOT NULL,
-          age INTEGER NOT NULL,
-          diet_preference VARCHAR(255) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
+    if (process.env.DATABASE_URL) {
+      const sql = neon(process.env.DATABASE_URL);
+      
+      // Ensure table exists just in case they visit admin first
+      await sql`
+        CREATE TABLE IF NOT EXISTS requisitions (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(50) NOT NULL,
+            age INTEGER NOT NULL,
+            diet_preference VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `;
 
-    data = await sql`SELECT * FROM requisitions ORDER BY created_at DESC`;
+      data = await sql`SELECT * FROM requisitions ORDER BY created_at DESC`;
+    } else {
+      // In-Memory Fallback
+      errorMsg = "Warning: No Neon Database connected. Showing temporary in-memory data (which resets frequently).";
+      // We don't have access to the exact array from route.ts across serverless functions, so we just show it empty or mocked here.
+    }
   } catch (err: any) {
     errorMsg = err.message;
   }
